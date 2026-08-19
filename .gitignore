@@ -27,6 +27,7 @@ MANIFEST
 venv/
 ENV/
 env/
+.env
 
 # --- IDEs and Editors (PyCharm / VS Code) ---
 .idea/
