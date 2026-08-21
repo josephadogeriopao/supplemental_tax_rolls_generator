@@ -15,7 +15,7 @@ import os
 import sys
 import shutil
 import warnings
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple, Any, Optional
 import pandas as pd
 import openpyxl
 from openpyxl.workbook.defined_name import DefinedName
@@ -47,23 +47,28 @@ class ConfigManager:
         Initializes environmental configurations, loads dotenv files, and maps core parameters.
 
         Args:
-            target_year (int): The active baseline processing tax year. Defaults to 2026.
-            quarter (int): The target reporting period quarter (1-4). Defaults to 2.
+            target_year (int): The active baseline processing tax year.
+            quarter (int): The target reporting period quarter (1-4).
+            real_file (Optional[str]): File path to raw Real Property dataset. Defaults to None.
+            pp_file (Optional[str]): File path to raw Personal Property dataset. Defaults to None.
+            output_dir (Optional[str]): Destination output directory path. Defaults to None.
         """
         self.target_tax_year = target_year
         self.quarter = quarter
         self.str_date = format_date()
         self.timeline_years = [self.target_tax_year - i for i in range(4)]
 
-        # Load environment paths
+        # Pure argument assignments with string type coercion
         self.real_file = real_file if real_file else ""
         self.pp_file = pp_file if pp_file else ""
-        self.output_dir = os.environ.get("OUTPUT_DIR", os.path.dirname(self.pp_file) if self.pp_file else "")
 
+        # Calculate fallback output folder context dynamically from arguments or host system environments
+        default_dir = os.path.dirname(self.pp_file) if self.pp_file else (os.path.dirname(self.real_file) if self.real_file else "")
+        self.output_dir = output_dir if output_dir else (os.environ.get("OUTPUT_DIR") or default_dir)
+
+        # Core file system anchors
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
         self.template_path = os.path.join(self.script_dir, "..", "..", "..", "templates", "str_template.xlsx")
-        self.final_output_path = os.path.join(self.output_dir, "consolidated supplemental tax rolls.xlsx")
-
 
         if self.output_dir:
             self.final_output_path = os.path.join(self.output_dir, "consolidated supplemental tax rolls.xlsx")
@@ -75,13 +80,23 @@ class ConfigManager:
         Verifies configuration readiness, environment variables, template locations,
         and destination spreadsheet write accessibility.
 
+        Requires that an output directory is resolved and that at least one source file
+        (Real Property or Personal Property) is populated.
+
         Returns:
             bool: True if all system configuration settings pass validation checks, False otherwise.
         """
-        if not all([self.real_file, self.pp_file, self.output_dir]):
-            print("❌ Error: Missing configuration paths or OUTPUT_DIR in your .env file!")
+        # Ensure the destination directory is mapped out
+        if not self.output_dir:
+            print("❌ Error: Missing output directory configuration or OUTPUT_DIR!")
             return False
 
+        # RULE CHECK: Enforce that at least one valid source track dataset is present to proceed
+        if not self.real_file and not self.pp_file:
+            print("❌ Error: Missing source inputs! At least one file (REAL_XLSX_FILE or PP_XLSX_FILE) must be provided.")
+            return False
+
+        # Validate master template presence
         if not os.path.exists(self.template_path):
             print(f"❌ Error: Base spreadsheet template not found at: {self.template_path}")
             return False
@@ -99,7 +114,7 @@ class ConfigManager:
         Returns:
             bool: True if the file can be modified or doesn't exist yet, False if locked.
         """
-        if os.path.exists(self.final_output_path):
+        if self.final_output_path and os.path.exists(self.final_output_path):
             try:
                 with open(self.final_output_path, "r+"):
                     pass

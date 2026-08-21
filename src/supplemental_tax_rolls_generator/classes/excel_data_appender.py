@@ -3,9 +3,10 @@ DOCX Supplemental Tax Rolls Generator - Class-Based Architecture
 -----------------------------------------------------------------
 Description: Class for data appending, managing template workbook replication,
              and inserting live Pandas data frames into distinct detail layers.
+             Safely handles cases where either input stream is missing or empty.
 
 Author: Joseph Adogeri
-Version: 5.0.0
+Version: 5.1.0
 Since: 2026-08-21
 File: excel_data_appender.py
 License: MIT
@@ -52,8 +53,8 @@ class ExcelDataAppender:
         """
         Reads raw spreadsheet source streams and appends distinct data tables and SQL logs into the workbook.
 
-        This method initializes target DataFrames, resolves structural evaluation column discrepancies,
-        and updates the file in append-replace mode using openpyxl.
+        This method verifies file availability dynamically to handle partial pipeline execution runs,
+        resolves structural evaluation column discrepancies, and updates the file in append-replace mode.
 
         Args:
             output_path (str): File system path to the cloned destination spreadsheet.
@@ -68,19 +69,42 @@ class ExcelDataAppender:
         """
         print("\n--- STEP 2: APPENDING LIVE DATA TABLES AND DETAIL SHEETS ---")
 
-        real_df = pd.read_excel(real_file, sheet_name=0)
-        pp_df = pd.read_excel(pp_file, sheet_name=0)
-        real_diff_col = "TOTAL_ASMT_DIFF" if "TOTAL_ASMT_DIFF" in real_df.columns else "ASMT_TOTAL_DIFF"
+        # Initialize safe default variables
+        real_subtotals = {}
+        pp_subtotals = {}
+        real_diff_col = "TOTAL_ASMT_DIFF"
+        real_df = None
+        pp_df = None
 
+        # 🏢 Load Real Property dataset dynamically if a path is provided
+        if real_file:
+            print("Reading Real Property dataset...")
+            real_df = pd.read_excel(real_file, sheet_name=0)
+            real_diff_col = "TOTAL_ASMT_DIFF" if "TOTAL_ASMT_DIFF" in real_df.columns else "ASMT_TOTAL_DIFF"
+        else:
+            print("ℹ️ Skipping Real Property: No source file provided.")
+
+        # 📦 Load Personal Property dataset dynamically if a path is provided
+        if pp_file:
+            print("Reading Personal Property dataset...")
+            pp_df = pd.read_excel(pp_file, sheet_name=0)
+        else:
+            print("ℹ️ Skipping Personal Property: No source file provided.")
+
+        # Execute structural sheet updates using the active openpyxl writer stream
         with pd.ExcelWriter(output_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-            print("Processing Real Property data...")
-            real_subtotals = append_data_and_details(writer, real_df, "REAL PROPERTY DETAILS", "REAL PROPERTY SQL",
-                                                     real_file)
-            print("Processing Real Data...", real_subtotals)
+            if real_df is not None:
+                print("Processing Real Property data...")
+                real_subtotals = append_data_and_details(
+                    writer, real_df, "REAL PROPERTY DETAILS", "REAL PROPERTY SQL", real_file
+                )
+                print("Processing Real Data...", real_subtotals)
 
-            print("Processing PP Property data...")
-            pp_subtotals = append_data_and_details(writer, pp_df, "PERSONAL PROPERTY DETAILS", "PERSONAL PROPERTY SQL",
-                                                   pp_file)
-            print("Processing PP Data...", pp_subtotals)
+            if pp_df is not None:
+                print("Processing PP Property data...")
+                pp_subtotals = append_data_and_details(
+                    writer, pp_df, "PERSONAL PROPERTY DETAILS", "PERSONAL PROPERTY SQL", pp_file
+                )
+                print("Processing PP Data...", pp_subtotals)
 
         return real_subtotals, pp_subtotals, real_diff_col
