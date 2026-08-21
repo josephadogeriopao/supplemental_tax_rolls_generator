@@ -2,12 +2,12 @@
 DOCX Supplemental Tax Rolls Generator - Main application runner
 ------------------
 Description: Main execution script that defines input/output configurations,
-             writes structured details tabs, and overwrites worksheet-scoped
-             local name manager variables directly with raw computed numeric sums
-             instead of cross-sheet formulas.
+             writes structured details tabs without disturbing the template summary tab,
+             and safely updates worksheet-scoped local defined names to completely
+             prevent #NAME? errors.
 
 Author: Joseph Adogeri
-Version: 4.7.0
+Version: 4.6.0
 Since: 2026-08-03
 File: main.py
 License: MIT
@@ -73,19 +73,16 @@ def main() -> None:
 
     # 🚀 STEP 2: WRITE COMPLEMENTARY PROPERTY SHEETS ONLY
     print("\n--- STEP 2: APPENDING LIVE DATA TABLES AND DETAIL SHEETS ---")
+    # By omitting 'CONSOLIDATED SUMMARY' from ExcelWriter entirely, pandas leaves the original tab and its names untouched
     with pd.ExcelWriter(final_output_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
         print("Processing Real Property data...")
         real_subtotals = append_data_and_details(writer, real_df, "REAL PROPERTY DETAILS", "REAL PROPERTY SQL", real_file)
 
-        print("Processing Real Data...", real_subtotals)
-
         print("Processing PP Property data...")
         pp_subtotals = append_data_and_details(writer, pp_df, "PERSONAL PROPERTY DETAILS", "PERSONAL PROPERTY SQL", pp_file)
 
-        print("Processing PP Data...", pp_subtotals)
-
-    # 🚀 STEP 3: UPDATE COPIED NAME VARIABLES DIRECTLY WITH STATIC VALUE TEXTS
-    print("\n--- STEP 3: OVERWRITING LOCAL VARIABLE CONFIGURATIONS WITH STATIC NUMERIC SUMS ---")
+    # 🚀 STEP 3: UPDATE COPIED NAME MANAGER VARIABLES IN-PLACE WITH ZERO SCHEMALOSS
+    print("\n--- STEP 3: SYNCHRONIZING CLONED LOCAL WORKSHEET VARIABLES ---")
     wb = openpyxl.load_workbook(final_output_path, data_only=False)
 
     target_sheet = "CONSOLIDATED SUMMARY"
@@ -115,35 +112,37 @@ def main() -> None:
         "TAX_YEAR": TARGET_TAX_YEAR,
     }
 
-    # 🔥 FIX: Evaluate totals into static Python numbers. Do not map formulas starting with '='!
-    # Instead of string formulas, we pass the raw dictionary value balance or fallback to default
+    # Evaluate rolling timelines and override default metrics ONLY if records exist
     for index, year in enumerate(timeline_years, start=1):
-
-        # 🏢 Real Estate Direct Balance Overwrite
+        # 🏢 Real Estate Live Override
         real_key = (year, real_diff_col)
         if real_key in real_subtotals:
-            # Captures the raw computed sum from excel_engine instead of creating cell pointers
-            UPDATES[f"REAL_ESTATE_{index}"] = real_subtotals[real_key]
+            UPDATES[f"REAL_ESTATE_{index}"] = f"={real_subtotals[real_key]}"
 
-        # 📦 Personal Property Direct Balance Overwrite
+        # 📦 Personal Property Live Override
         pp_key = (year, "NETASMT_DIFF")
         if pp_key in pp_subtotals:
-            UPDATES[f"PERSONAL_PROPERTY_{index}"] = pp_subtotals[pp_key]
+            UPDATES[f"PERSONAL_PROPERTY_{index}"] = f"={pp_subtotals[pp_key]}"
 
-        # 🏡 Homestead Net Direct Balance Overwrite
+        # 🏡 Homestead Net Live Override
         home_key = (year, "HOMESTEAD_DIFF")
         if home_key in real_subtotals:
-            UPDATES[f"HOMESTEAD_EXEMPTION_NET_{index}"] = real_subtotals[home_key]
+            UPDATES[f"HOMESTEAD_EXEMPTION_NET_{index}"] = f"={real_subtotals[home_key]}"
 
-    # 🔥 UNIFORM INJECTION PASS: All variables are written explicitly as clean static numbers
+    # Overwrite the cloned variables using openpyxl's type separation method
     for var_name, final_expression in UPDATES.items():
-        new_dn = DefinedName(name=var_name, localSheetId=sheet_index)
-        new_dn.value = str(final_expression)  # Pure static text numbers block Excel from causing #NAME? errors
+        if str(final_expression).startswith("="):
+            # Formulate OpenXML string formula range pointer node
+            new_dn = DefinedName(name=var_name, localSheetId=sheet_index, attr_text=str(final_expression))
+        else:
+            # Formulate strict string literal integer structure value
+            new_dn = DefinedName(name=var_name, localSheetId=sheet_index)
+            new_dn.value = str(final_expression)
 
-        # Force commit changes into both local worksheet dictionary collections and global arrays
+        # Re-commit into the sheet dictionary container and global collection arrays
         ws.defined_names[var_name] = new_dn
         wb.defined_names.add(new_dn)
-        print(f"   ✓ Name Manager: Hard Overwrite -> {var_name} = {final_expression}")
+        print(f"   ✓ Synchronized Variable -> {var_name} = {final_expression}")
 
     # Enforce strict layout workbook sheet ordering
     desired_order = [target_sheet, "REAL PROPERTY DETAILS", "REAL PROPERTY SQL", "PERSONAL PROPERTY DETAILS", "PERSONAL PROPERTY SQL"]
@@ -157,7 +156,7 @@ def main() -> None:
     wb.save(final_output_path)
     wb.close()
 
-    print(f"\n✅ Success! All local variables overwritten with calculated static sums directly.")
+    print(f"\n✅ Success! Cloned workbook generated with completely retained local schema variables.")
 
 
 if __name__ == "__main__":
