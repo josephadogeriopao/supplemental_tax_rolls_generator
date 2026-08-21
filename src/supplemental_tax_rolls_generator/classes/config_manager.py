@@ -3,9 +3,11 @@ DOCX Supplemental Tax Rolls Generator - Class-Based Architecture
 -----------------------------------------------------------------
 Description: Class managing system configuration environment initialization,
              filesystem path routing, and target timeline sequence builds.
+             Integrates cross-runtime asset path resolution for local dev
+             and PyInstaller environments.
 
 Author: Joseph Adogeri
-Version: 5.0.0
+Version: 5.2.0
 Since: 2026-08-21
 File: config_manager.py
 License: MIT
@@ -27,6 +29,33 @@ from utils.date import format_date
 from utils.named_manager import get_tax_roll_initial_values
 
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+
+
+def get_asset_path(relative_path: str) -> str:
+    """
+    Resolves the absolute path for both development (PyCharm/CLI) and PyInstaller builds.
+    Uses runtime entry point detection to ensure safe relative mapping.
+    """
+    # 1. Inside PyInstaller bundle: assets are directly in the temp root folder (_MEIPASS)
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.normpath(os.path.join(sys._MEIPASS, relative_path))
+
+    # 2. Inside Local Dev: Detect where the main executing file (main.py/app.py) lives
+    # This prevents subfolder nesting or current working directory from breaking paths
+    entry_file = os.path.abspath(sys.argv[0] if sys.argv else __file__)
+    entry_dir = os.path.dirname(entry_file)
+
+    # Normalize folder array path to slice off 'src' if it's trapped in the path
+    parts = entry_dir.split(os.sep)
+    if "src" in parts:
+        src_index = parts.index("src")
+        project_root = os.sep.join(parts[:src_index])
+        if project_root.endswith(":"):
+            project_root += os.sep
+    else:
+        project_root = entry_dir
+
+    return os.path.normpath(os.path.join(project_root, relative_path))
 
 
 class ConfigManager:
@@ -66,9 +95,8 @@ class ConfigManager:
         default_dir = os.path.dirname(self.pp_file) if self.pp_file else (os.path.dirname(self.real_file) if self.real_file else "")
         self.output_dir = output_dir if output_dir else (os.environ.get("OUTPUT_DIR") or default_dir)
 
-        # Core file system anchors
-        self.script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.template_path = os.path.join(self.script_dir, "..", "..", "..", "templates", "str_template.xlsx")
+        # 🏢 FIX: Pointed to your new 'root/assets/templates' project layout folder path
+        self.template_path = get_asset_path(os.path.join("assets", "templates", "str_template.xlsx"))
 
         if self.output_dir:
             self.final_output_path = os.path.join(self.output_dir, "consolidated supplemental tax rolls.xlsx")

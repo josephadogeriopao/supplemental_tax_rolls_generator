@@ -55,7 +55,7 @@ class TaxRollOrchestrator:
 
         Raises:
             SystemExit: Aborts script processing execution with exit status code 1 if file
-                        locks or file system path exceptions are caught during validation passes.
+                        locks or file system path.py exceptions are caught during validation passes.
         """
         if not self.config.validate():
             print("❌ Pipeline execution aborted due to initialization context failures.")

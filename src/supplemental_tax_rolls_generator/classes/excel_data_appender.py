@@ -39,11 +39,11 @@ class ExcelDataAppender:
     @staticmethod
     def clone_template(template_path: str, output_path: str) -> None:
         """
-        Replicates the baseline master Excel template to the final target output path destination.
+        Replicates the baseline master Excel template to the final target output path.py destination.
 
         Args:
-            template_path (str): File system path to the master spreadsheet template.
-            output_path (str): Destination file system path where the report is generated.
+            template_path (str): File system path.py to the master spreadsheet template.
+            output_path (str): Destination file system path.py where the report is generated.
         """
         print("--- STEP 1: CLONING BASE TEMPLATE WORKBOOK STRUCTURE ---")
         shutil.copyfile(template_path, output_path)
@@ -57,9 +57,9 @@ class ExcelDataAppender:
         resolves structural evaluation column discrepancies, and updates the file in append-replace mode.
 
         Args:
-            output_path (str): File system path to the cloned destination spreadsheet.
-            real_file (str): File path containing incoming raw Real Property datasets.
-            pp_file (str): File path containing incoming raw Personal Property datasets.
+            output_path (str): File system path.py to the cloned destination spreadsheet.
+            real_file (str): File path.py containing incoming raw Real Property datasets.
+            pp_file (str): File path.py containing incoming raw Personal Property datasets.
 
         Returns:
             Tuple[Dict, Dict, str]: A tuple containing:
@@ -76,7 +76,7 @@ class ExcelDataAppender:
         real_df = None
         pp_df = None
 
-        # 🏢 Load Real Property dataset dynamically if a path is provided
+        # 🏢 Load Real Property dataset dynamically if a path.py is provided
         if real_file:
             print("Reading Real Property dataset...")
             real_df = pd.read_excel(real_file, sheet_name=0)
@@ -84,7 +84,7 @@ class ExcelDataAppender:
         else:
             print("ℹ️ Skipping Real Property: No source file provided.")
 
-        # 📦 Load Personal Property dataset dynamically if a path is provided
+        # 📦 Load Personal Property dataset dynamically if a path.py is provided
         if pp_file:
             print("Reading Personal Property dataset...")
             pp_df = pd.read_excel(pp_file, sheet_name=0)

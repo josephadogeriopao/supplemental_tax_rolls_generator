@@ -37,10 +37,10 @@ class NameManagerUpdater:
 
     def __init__(self, output_path: str, target_sheet: str = "CONSOLIDATED SUMMARY"):
         """
-        Initializes the updater with the generated file path and destination sheet targets.
+        Initializes the updater with the generated file path.py and destination sheet targets.
 
         Args:
-            output_path (str): File system path to the target destination spreadsheet.
+            output_path (str): File system path.py to the target destination spreadsheet.
             target_sheet (str): The specific worksheet name holding the local variables.
                                 Defaults to "CONSOLIDATED SUMMARY".
         """
