@@ -23,6 +23,8 @@ from openpyxl.workbook.defined_name import DefinedName
 
 # Import the engine module from your separate local processing file
 from excel_engine import append_data_and_details
+from utils.date import format_date
+from utils.named_manager import get_tax_roll_initial_values
 
 load_dotenv()
 
@@ -40,6 +42,7 @@ def main() -> None:
     # 📌 USER ENTRY: Configure your active baseline target year and quarter
     TARGET_TAX_YEAR = 2026
     QUARTER = 2
+    STR_DATE = format_date()
 
     # Construct the strict 4-year rolling target sequence (e.g., 2026, 2025, 2024, 2023)
     timeline_years = [TARGET_TAX_YEAR - i for i in range(4)]
@@ -97,25 +100,9 @@ def main() -> None:
     sheet_index = wb.sheetnames.index(target_sheet)
     real_diff_col = "TOTAL_ASMT_DIFF" if "TOTAL_ASMT_DIFF" in real_df.columns else "ASMT_TOTAL_DIFF"
 
-    # Define baseline fallback map values matching your exact specifications
-    UPDATES = {
-        "HOMESTEAD_EXEMPTION_NET_1": 0,
-        "HOMESTEAD_EXEMPTION_NET_2": 0,
-        "HOMESTEAD_EXEMPTION_NET_3": 0,
-        "HOMESTEAD_EXEMPTION_NET_4": 0,
-        "PERSONAL_PROPERTY_1": 0,
-        "PERSONAL_PROPERTY_2": 0,
-        "PERSONAL_PROPERTY_3": 0,
-        "PERSONAL_PROPERTY_4": 0,
-        "QUARTER": QUARTER,
-        "REAL_ESTATE_1": 0,
-        "REAL_ESTATE_2": 0,
-        "REAL_ESTATE_3": 0,
-        "REAL_ESTATE_4": 0,
-        "TAX_YEAR": TARGET_TAX_YEAR,
-    }
+    UPDATES = get_tax_roll_initial_values(QUARTER, TARGET_TAX_YEAR, STR_DATE)
 
-    # 🔥 FIX: Evaluate totals into static Python numbers. Do not map formulas starting with '='!
+    # 🔥 EVALUATE: Evaluate totals into static Python numbers. Do not map formulas starting with '='!
     # Instead of string formulas, we pass the raw dictionary value balance or fallback to default
     for index, year in enumerate(timeline_years, start=1):
 
@@ -141,15 +128,22 @@ def main() -> None:
 
         print("updating data...",UPDATES)
 
-    # 🔥 UNIFORM INJECTION PASS: All variables are written explicitly as clean static numbers
+    # 🔥 UNIFORM INJECTION PASS: All variables are written explicitly as clean static parameters
     for var_name, final_expression in UPDATES.items():
         new_dn = DefinedName(name=var_name, localSheetId=sheet_index)
-        new_dn.value = str(final_expression)  # Pure static text numbers block Excel from causing #NAME? errors
+
+        # FIX: Check if the parameter is a text string (like STR_DATE)
+        if isinstance(final_expression, str):
+            # Escape strings in literal double quotes to stop Excel's =@ array conversion engine bug
+            new_dn.value = f'"{final_expression}"'
+        else:
+            # Numbers (ints/floats) remain raw string digit representations
+            new_dn.value = str(final_expression)
 
         # Force commit changes into both local worksheet dictionary collections and global arrays
         ws.defined_names[var_name] = new_dn
         wb.defined_names.add(new_dn)
-        print(f"   ✓ Name Manager: Hard Overwrite -> {var_name} = {final_expression}")
+        print(f"   ✓ Name Manager: Hard Overwrite -> {var_name} = {new_dn.value}")
 
     # Enforce strict layout workbook sheet ordering
     desired_order = [target_sheet, "REAL PROPERTY DETAILS", "REAL PROPERTY SQL", "PERSONAL PROPERTY DETAILS", "PERSONAL PROPERTY SQL"]

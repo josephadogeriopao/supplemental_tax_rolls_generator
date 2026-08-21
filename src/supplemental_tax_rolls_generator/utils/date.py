@@ -1,13 +1,19 @@
 from datetime import datetime
 
-# Option A: Get the current date and time
-now = datetime.now()
-formatted_now = now.strftime("%B %d, %Y").upper()
+from openpyxl.descriptors import DateTime
 
-# Option B: Format a specific hardcoded date (e.g., April 1, 2025)
-specific_date = datetime(2025, 4, 1)
-formatted_specific = specific_date.strftime("%B %d, %Y").upper()
 
-# Print results
-print(f'Current Date: "{formatted_now}"')
-print(f'Specific Date: "{formatted_specific}"')
+def format_date() -> str:
+    now = datetime.now()
+    formatted_now = now.strftime("%B %d, %Y").upper()
+
+    # Print results
+    print(f'Current Date: "{formatted_now}"')
+    return formatted_now
+
+# --- VERIFICATION EXAMPLES ---
+if __name__ == "__main__":
+    # Test 1: No date provided (Uses current date)
+    print(f'Default (Current): "{format_date()}"')
+
+
