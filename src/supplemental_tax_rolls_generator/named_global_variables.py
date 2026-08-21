@@ -19,6 +19,7 @@ UPDATES = {
     "REAL_ESTATE_3": 80000,
     "REAL_ESTATE_4": 90000,
     "TAX_YEAR": 2026,
+    "STR_DATE": "APRIL 1, 2025"
 }
 
 

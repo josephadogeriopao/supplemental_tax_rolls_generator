@@ -121,19 +121,25 @@ def main() -> None:
 
         # 🏢 Real Estate Direct Balance Overwrite
         real_key = (year, real_diff_col)
+        print(f"year: {year}, diff_col: {real_diff_col}, real_key: {real_key}")
         if real_key in real_subtotals:
             # Captures the raw computed sum from excel_engine instead of creating cell pointers
+            print("value of real subtotal: ", real_subtotals[real_key])
             UPDATES[f"REAL_ESTATE_{index}"] = real_subtotals[real_key]
 
         # 📦 Personal Property Direct Balance Overwrite
         pp_key = (year, "NETASMT_DIFF")
         if pp_key in pp_subtotals:
+            print("value of pp subtotal: ", pp_subtotals[pp_key])
+
             UPDATES[f"PERSONAL_PROPERTY_{index}"] = pp_subtotals[pp_key]
 
         # 🏡 Homestead Net Direct Balance Overwrite
         home_key = (year, "HOMESTEAD_DIFF")
         if home_key in real_subtotals:
             UPDATES[f"HOMESTEAD_EXEMPTION_NET_{index}"] = real_subtotals[home_key]
+
+        print("updating data...",UPDATES)
 
     # 🔥 UNIFORM INJECTION PASS: All variables are written explicitly as clean static numbers
     for var_name, final_expression in UPDATES.items():
