@@ -23,7 +23,14 @@ class TaxRollOrchestrator:
     It links configuration context setups with raw data appending and name manager adjustments.
     """
 
-    def __init__(self, target_year: int = 2026, quarter: int = 2):
+    def __init__(
+        self,
+        target_year: int,
+        quarter: int,
+        real_file: Optional[str] = None,
+        pp_file: Optional[str] = None,
+        output_dir: Optional[str] = None
+    ):
         """
         Initializes the top-level orchestrator engine with specific timeline scopes.
 
@@ -31,8 +38,13 @@ class TaxRollOrchestrator:
             target_year (int): The 4-digit processing base target tax year. Defaults to 2026.
             quarter (int): The target reporting calendar quarter (1-4). Defaults to 2.
         """
-        self.config = ConfigManager(target_year, quarter)
-
+        self.config = ConfigManager(
+            target_year=target_year,
+            quarter=quarter,
+            real_file=real_file,
+            pp_file=pp_file,
+            output_dir=output_dir
+        )
     def execute_pipeline(self) -> None:
         """
         Runs validation, data cloning, tab insertions, and cell property overrides cleanly.

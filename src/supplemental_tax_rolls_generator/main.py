@@ -14,6 +14,7 @@ License: MIT
 """
 
 import sys
+import os
 import warnings
 from dotenv import load_dotenv
 
@@ -33,8 +34,26 @@ def main() -> None:
     """
     warnings.filterwarnings("ignore")
 
-    # Point-of-entry pipeline initiation targeting specific parameters
-    orchestrator = TaxRollOrchestrator(target_year=2026, quarter=2)
+    # 🌍 Step 1: Explicitly load environments at the application root boundaries
+    load_dotenv()
+
+    # 🌍 Step 2: Resolve runtime targets and configurations
+    TARGET_TAX_YEAR = 2026
+    QUARTER = 2
+
+    env_real_file = os.environ.get("REAL_XLSX_FILE")
+    env_pp_file = os.environ.get("PP_XLSX_FILE")
+    env_output_dir = os.environ.get("OUTPUT_DIR")
+
+    # 🌍 Step 3: Forward resolved configurations straight to the orchestration layer
+    orchestrator = TaxRollOrchestrator(
+        target_year=TARGET_TAX_YEAR,
+        quarter=QUARTER,
+        real_file=env_real_file,
+        pp_file=env_pp_file,
+        output_dir=env_output_dir
+    )
+
     orchestrator.execute_pipeline()
 
 

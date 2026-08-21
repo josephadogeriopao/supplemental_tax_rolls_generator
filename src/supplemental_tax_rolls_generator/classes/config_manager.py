@@ -35,7 +35,14 @@ class ConfigManager:
     required to run the supplemental tax rolls pipeline.
     """
 
-    def __init__(self, target_year: int = 2026, quarter: int = 2):
+    def __init__(
+        self,
+        target_year: int,
+        quarter: int,
+        real_file: Optional[str] = None,
+        pp_file: Optional[str] = None,
+        output_dir: Optional[str] = None
+    ):
         """
         Initializes environmental configurations, loads dotenv files, and maps core parameters.
 
@@ -43,20 +50,25 @@ class ConfigManager:
             target_year (int): The active baseline processing tax year. Defaults to 2026.
             quarter (int): The target reporting period quarter (1-4). Defaults to 2.
         """
-        load_dotenv()
         self.target_tax_year = target_year
         self.quarter = quarter
         self.str_date = format_date()
         self.timeline_years = [self.target_tax_year - i for i in range(4)]
 
         # Load environment paths
-        self.real_file = os.environ.get("REAL_XLSX_FILE", "PATH TO PDF FILE")
-        self.pp_file = os.environ.get("PP_XLSX_FILE", "PATH TO OUTPUT FOLDER/ DIRECTORY")
+        self.real_file = real_file if real_file else ""
+        self.pp_file = pp_file if pp_file else ""
         self.output_dir = os.environ.get("OUTPUT_DIR", os.path.dirname(self.pp_file) if self.pp_file else "")
 
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
         self.template_path = os.path.join(self.script_dir, "..", "..", "..", "templates", "str_template.xlsx")
         self.final_output_path = os.path.join(self.output_dir, "consolidated supplemental tax rolls.xlsx")
+
+
+        if self.output_dir:
+            self.final_output_path = os.path.join(self.output_dir, "consolidated supplemental tax rolls.xlsx")
+        else:
+            self.final_output_path = ""
 
     def validate(self) -> bool:
         """
